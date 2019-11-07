@@ -4,6 +4,7 @@
 
 import math
 import pygame as pg 
+import random
 
 #class for pellet objects using pg sprites to draw
 class Pellet(pg.sprite.Sprite):
@@ -25,7 +26,14 @@ class Pacman(pg.sprite.Sprite):
         super().__init__()
         self.image = pacman
         self.rect = self.image.get_rect(center=pos)
-    
+
+#ghost sprite class
+class Ghost(pg.sprite.Sprite):
+    def __init__(self, pos):
+        super().__init__()
+        self.image = ghost
+        self.rect = self.image.get_rect(center=pos)
+   
 #creates pellet object, sets paremeters
 def spawnPellet(x = 100, y = 100):
     #create pellet object
@@ -61,14 +69,32 @@ def redraw(mouse = 1):
                 win.blit(pacman, (((y+1)*40)-15, ((x+1)*40)-15))
 #                print(pacman.center)
 #                pg.draw.rect(win, (255, 0, 0), (((y+1)*40)-10, ((x+1)*40)-10, 20, 20), 2)
+            elif maze[x][y] == 4:
+                win.blit(ghost, (((y+1)*40)-15, ((x+1)*40)-15))
+
 
     #60 updates per second (equivalent to 5 fps) since it only checks and updates what is seen on screen 5 times per second 
     clock.tick(6)
     pg.display.update()       
 #    pg.display.flip()
+  
     
-    
-    
+#print lose text and quit game loop
+def loseGame():
+    #make font type
+    font = pg.font.Font('freesansbold.ttf', 32) 
+    #make text and draw on rectangle
+    text = font.render('Game Over', True, (0, 255, 0), (0, 0, 0)) 
+    #get rectange values
+    textRect = text.get_rect() 
+    #set location values
+    textRect.center = (((mazey * 40) // 2) + 20, ((mazex * 40) // 2)+20) 
+    #draw on window
+    win.blit(text, textRect)
+    #update window
+    pg.display.update()   
+    #return true to pause game
+    return True
     
     
 ############################program main############################
@@ -85,11 +111,11 @@ sprites_list = pg.sprite.Group()
 
 
 #maze is array of numbers which stores the maze state to be rendered
-#basic implementation - 0 is nothing, 1 is pellet, 2 is wall (currently only implemented pellets), 3 is pacman
+#basic implementation - 0 is nothing, 1 is pellet, 2 is wall (currently only implemented pellets), 3 is pacman, 4 is ghost for now
 maze = [[0, 3, 0, 0, 2, 1],
         [0, 1, 0, 1, 2, 0],
         [1, 1, 2, 0, 2, 1],
-        [2, 2, 2, 0, 2, 0],
+        [2, 2, 2, 0, 2, 4],
         [1, 0, 0, 1, 1, 0]]
 
 #maze x y sizes
@@ -109,8 +135,10 @@ pg.display.set_caption("Pac-man")
 
 #load pacman image sprite
 pacman = pg.image.load('pacman2.png').convert_alpha()
+ghost = pg.image.load('ghost.png').convert_alpha()
 #make pacman class object for player
 player = Pacman([200, 200])
+enemy = Ghost([200, 200])
 #add to list of sprites to render
 sprites_list.add(player)
 
@@ -118,7 +146,7 @@ sprites_list.add(player)
 pellet_list = pg.sprite.Group()
 #game loop variable, loops until condition is false which stops game
 run = True
-
+pause = False
 
 
 #window loop to render objects
@@ -133,6 +161,9 @@ while run == True:
         elif event.type == pg.KEYDOWN and event.key == pg.K_w:
             #check if pacman is against edge of maze (or wall but not implemented yet)
             if pacx > 0 and maze[pacx-1][pacy] != 2:
+                #lazy ghost check
+                if maze[pacx-1][pacy] == 4:
+                    pause = loseGame()
                 #move location of pacman in array
                 #make original space empty
                 maze[pacx][pacy] = 0
@@ -142,6 +173,8 @@ while run == True:
         elif event.type == pg.KEYDOWN and event.key == pg.K_s:
             #check if pacman is against edge of maze (or wall but not implekented yet)
             if pacx < mazex - 1 and maze[pacx+1][pacy] != 2:
+                if maze[pacx+1][pacy] == 4:
+                    pause = loseGame()
                 #move location of pacman in array
                 #make original space empty
                 maze[pacx][pacy] = 0
@@ -151,6 +184,8 @@ while run == True:
         elif event.type == pg.KEYDOWN and event.key == pg.K_a:
             #check if pacman is against edge of maze (or wall but not implekented yet)
             if pacy > 0 and maze[pacx][pacy-1] != 2:
+                if maze[pacx][pacy-1] == 4:
+                    pause = loseGame()
                 #move location of pacman in array
                 #make original space empty
                 maze[pacx][pacy] = 0
@@ -160,6 +195,8 @@ while run == True:
         elif event.type == pg.KEYDOWN and event.key == pg.K_d:
             #check if pacman is against edge of maze (or wall but not implekented yet)
             if pacy < mazey - 1 and maze[pacx][pacy+1] != 2:
+                if  maze[pacx][pacy+1] == 4:
+                    pause = loseGame()
                 #move location of pacman in array
                 #make original space empty
                 maze[pacx][pacy] = 0
@@ -174,6 +211,8 @@ while run == True:
     if keys[pg.K_UP]:
         #check if pacman is against edge of maze (or wall but not implemented yet)
         if pacx > 0 and maze[pacx-1][pacy] != 2:
+            if maze[pacx-1][pacy] == 4:
+                    pause = loseGame()
             #move location of pacman in array
             #make original space empty
             maze[pacx][pacy] = 0
@@ -184,6 +223,8 @@ while run == True:
     if keys[pg.K_DOWN]:
         #check if pacman is against edge of maze (or wall but not implekented yet)
         if pacx < mazex - 1 and maze[pacx+1][pacy] != 2:
+            if maze[pacx+1][pacy] == 4:
+                    pause = loseGame()
             #move location of pacman in array
             #make original space empty
             maze[pacx][pacy] = 0
@@ -194,6 +235,8 @@ while run == True:
     if keys[pg.K_LEFT]:
         #check if pacman is against edge of maze (or wall but not implekented yet)
         if pacy > 0 and maze[pacx][pacy-1] != 2:
+            if maze[pacx][pacy-1] == 4:
+                    pause =loseGame()
             #move location of pacman in array
             #make original space empty
             maze[pacx][pacy] = 0
@@ -204,6 +247,8 @@ while run == True:
     if keys[pg.K_RIGHT]:
         #check if pacman is against edge of maze (or wall but not implekented yet)
         if pacy < mazey - 1 and maze[pacx][pacy+1] != 2:
+            if maze[pacx][pacy+1] == 4:
+                    pause = loseGame()
             #move location of pacman in array
             #make original space empty
             maze[pacx][pacy] = 0
@@ -215,8 +260,9 @@ while run == True:
     #clock tick controls how many time the game is updated per second, higher = more frames        
 #    clock.tick (fps)
     
-    #draw sprites onto window 
-    redraw()
+    if pause == False:
+        #draw sprites onto window 
+        redraw()
 
 
 #stop pygame     
