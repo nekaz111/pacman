@@ -80,6 +80,8 @@ def redraw(array):
  
     
 def drawWindow():
+    #initialize pygame module
+    pg.init()
     #draw window
     win = pg.display.set_mode((600,600))
     #window name
@@ -87,10 +89,11 @@ def drawWindow():
     return win
 
 #modified version for group partner code
-def otherRedraw(win, array, coin_coords, ghost_coords, power_coords, wall_list, score):
+def otherRedraw(win, array, coin_coords, ghost_coords, power_coords, wall_list, score, pacy, pacx):
     
     #load ghost file
     ghost = pg.image.load('ghost2.png').convert_alpha()
+    pacman = pg.image.load('pacman.png').convert_alpha()
     arrayX = len(array)
     arrayY = len(array[0])
     #refill background first so that previously drawn objects don't stay on screen, 0 0 0 is black 
@@ -129,9 +132,19 @@ def otherRedraw(win, array, coin_coords, ghost_coords, power_coords, wall_list, 
         win.blit(ghost, (((x[1]+1)*20)-7, ((x[0]+1)*20)-7))
     for x in wall_list:
         pg.draw.rect(win, (0, 0, 255), (((x[1]+1)*20)-10, ((x[0]+1)*20)-10, 20, 20))
+    win.blit(pacman, (((pacx+1)*20)-7, ((pacy+1)*20)-7))
     
     #draw score on window
-    
+    #make font type
+    font = pg.font.Font('freesansbold.ttf', 32) 
+    #make text and draw on rectangle
+    text = font.render("Score: " + str(score), True, (0, 255, 0), (0, 0, 0)) 
+    #get rectange values
+    textRect = text.get_rect() 
+    #set location values
+    textRect.center = ((arrayY * 50) // 2 + 20, (arrayX * 50) // 2 +20) 
+    #draw on window
+    win.blit(text, textRect)
     #60 updates per second (equivalent to 5 fps) since it only checks and updates what is seen on screen 5 times per second 
 #    clock.tick(10)
     pg.display.update()       

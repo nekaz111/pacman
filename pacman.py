@@ -344,15 +344,17 @@ def logic():
 def main():
     global game_over
     setup()
+
     while not game_over:
         if not idle:
             os.system("cls")
         draw()
         check_input()
         logic()
-        #pass values to graphics rendering+
+        #make window
         window = pacgraphics.drawWindow()
-        pacgraphics.otherRedraw(window, board, coin_coords, ghost_coords, power_coords, wall_list, score)
+        #pass values to graphics rendering   
+        pacgraphics.otherRedraw(window, board, coin_coords, ghost_coords, power_coords, wall_list, score, y, x)
         time.sleep(0.2)  # game speed
     print("Game Over!")
     input("Press enter to continue . . . ")
