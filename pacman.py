@@ -1,269 +1,374 @@
-#Jeremiah Hsieh AI Pac Man Final Project
-#basic display and movement of pacman
+"""Pac-Man"""
+# Created on 6-11-2019
+__author__ = "Rui Ding"
+__email__ = "rding@albany.edu"
+__version__ = "1.1"
+
+# ToDo:
+#   - Add intelligent ghost AI and pathfinding
+
+# Notes:
+#   - All coordinates are set like this: [Y, X]
+
+import time, os, random, msvcrt, sys, subprocess
+import pacgraphics
+
+game_over = False
+debug = False
+score = 0  # incremented when a coin is collected
+n_ghosts = 4  # maximum of 4 ghosts at once
+n_powerups = 4
+power_coords = []
+ghost_initial_coords = [[10, 8], [10, 9], [10, 10], [9, 9]]
+ghost_coords = [[10, 8], [10, 9], [10, 10], [9, 9]]  # matrix
+ghost_direction = []
+ghost_prev_direction = []
+coin_coords = []  # matrix
+direction = "STOP"
+board = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+         [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
+const_height = len(board)
+const_width = len(board[0])  # 19
+wall_list = []
+player_str = "O"
+ghost_str = "X"
+power_str = "*"
+coin_str = "."
+wall_str = "|"
+space_str = " "
+power_duration = 100
+powered = False
+probability_of_changing_direction = 50
+max_probability_change_direction = 100
+probability_going_back = 0
+max_probability_going_back = 100
+multiplier = 1
 
 
-import math
-import pygame as pg 
-import random
-
-#class for pellet objects using pg sprites to draw
-class Pellet(pg.sprite.Sprite):
-    #initialize default to 255,255,255 which is white, 
-    def __init__(self, x, y, r = 10, rgb = (255, 255, 255)):
-        pg.sprite.Sprite.__init__(self)
-        #x is x coordinate of pellet
-        self.x = x
-        #y is y coordinate
-        self.y = y
-        #r is radius of pellet
-        self.r = r
-        #rgb is color although technically python uses BGR (?) although that's may only be for opencv images
-        self.rgb = rgb
-        
-#pacman sprite class        
-class Pacman(pg.sprite.Sprite):
-    def __init__(self, pos):
-        super().__init__()
-        self.image = pacman
-        self.rect = self.image.get_rect(center=pos)
-
-#ghost sprite class
-class Ghost(pg.sprite.Sprite):
-    def __init__(self, pos):
-        super().__init__()
-        self.image = ghost
-        self.rect = self.image.get_rect(center=pos)
-   
-#creates pellet object, sets paremeters
-def spawnPellet(x = 100, y = 100):
-    #create pellet object
-    pellet = Pellet(x, y)
-    return pellet
+def setup():
+    global x, y, wall_list, ghost_coords, board, max_score, enable_death, empty_space, ghost_direction, game_over, power_coords, initial_power_coords
+    enable_death = False
+    game_over = False
+    x = 9
+    y = 16
+    for yindex, row in enumerate(board):
+        for xindex, column in enumerate(row):
+            if column == 1:
+                wall_list.append([yindex, xindex])
+            else:
+                coin_coords.append([yindex, xindex])
+    empty_space = coin_coords
+    max_score = len(coin_coords)
+    for x in range(n_ghosts):
+        ghost_direction.append("STOP")
+        ghost_prev_direction.append("STOP")
+    power_coords = [[1, 1], [1, 17], [19, 17], [19, 1]]  # [Y, X]
+    initial_power_coords = [[1, 1], [1, 17], [20, 17], [20, 1]]
 
 
-#redraws window and updates values on a clock timer
-def redraw(mouse = 1):
-    #refill background first so that previously drawn objects don't stay on screen, 0 0 0 is black 
-    win.fill((0,0,0))
-    #draw maze bounding box
-    pg.draw.rect(win, (0, 0, 255), (20, 20, mazey * 40, mazex * 40), 2)
-    #window, color, starting position and size
-#    pg.draw.rect(win, (255, 255, 255), (paddle.x, paddle.y, paddle.width, paddle.height))
-    pellet_list.draw(win)
-    #draw maze features
-    #loop thorugh maze array
-    for x in range(mazex):
-        for y in range(mazey):  
-            #draw pellet if 1 is encountered
-            if maze[x][y] == 1:
-                #remember 0,0 is top left of window not bottom right like on a graph (hence why x and y are reversed?)
-                pg.draw.circle(win, (255, 255, 255), [(y+1)*40, (x+1)*40], 10)
-#                pg.draw.rect(win, (255, 0, 0), (((y+1)*40)-20, ((x+1)*40)-20, 40, 40), 2)
-            #draw wall if 2 is encountered
-            elif maze[x][y] == 2:
-                pg.draw.rect(win, (0, 0, 255), (((y+1)*40)-20, ((x+1)*40)-20, 40, 40))
-            #draw pacman sprite where 3 is in array
-            elif maze[x][y] == 3:
-#                sprites_list.draw(win)
-                #blit to draw image at coordinates
-                win.blit(pacman, (((y+1)*40)-15, ((x+1)*40)-15))
-#                print(pacman.center)
-#                pg.draw.rect(win, (255, 0, 0), (((y+1)*40)-10, ((x+1)*40)-10, 20, 20), 2)
-            elif maze[x][y] == 4:
-                win.blit(ghost, (((y+1)*40)-15, ((x+1)*40)-15))
+def repopulate_board():
+    global initial_power_coords, power_coords
+    for yindex, row in enumerate(board):
+        for xindex, column in enumerate(row):
+            if column == 0:
+                coin_coords.append([yindex, xindex])
+    for index, powerup in enumerate(initial_power_coords):
+        power_coords[index] = powerup
 
 
-    #60 updates per second (equivalent to 5 fps) since it only checks and updates what is seen on screen 5 times per second 
-    clock.tick(6)
-    pg.display.update()       
-#    pg.display.flip()
-  
-    
-#print lose text and quit game loop
-def loseGame():
-    #make font type
-    font = pg.font.Font('freesansbold.ttf', 32) 
-    #make text and draw on rectangle
-    text = font.render('Game Over', True, (0, 255, 0), (0, 0, 0)) 
-    #get rectange values
-    textRect = text.get_rect() 
-    #set location values
-    textRect.center = (((mazey * 40) // 2) + 20, ((mazex * 40) // 2)+20) 
-    #draw on window
-    win.blit(text, textRect)
-    #update window
-    pg.display.update()   
-    #return true to pause game
-    return True
-    
-    
-############################program main############################
-#initialize pygame module
-pg.init()
-#window size variables
-winx = 800
-winy = 800
-#fps is frames per second for clock tick speed
-fps = 30
-
-#list of all sprites in game
-sprites_list = pg.sprite.Group()
-
-
-#maze is array of numbers which stores the maze state to be rendered
-#basic implementation - 0 is nothing, 1 is pellet, 2 is wall (currently only implemented pellets), 3 is pacman, 4 is ghost for now
-maze = [[0, 3, 0, 0, 2, 1],
-        [0, 1, 0, 1, 2, 0],
-        [1, 1, 2, 0, 2, 1],
-        [2, 2, 2, 0, 2, 4],
-        [1, 0, 0, 1, 1, 0]]
-
-#maze x y sizes
-mazex = len(maze)
-mazey = len(maze[0])
-#pacman x y coordinate, maybe automate it to read from maze array?
-pacx = 0
-pacy = 1
-
-#gamestate timer
-clock = pg.time.Clock()
-    
-#set window parameters
-win = pg.display.set_mode((winx,winy))
-#window name
-pg.display.set_caption("Pac-man")
-
-#load pacman image sprite
-pacman = pg.image.load('pacman2.png').convert_alpha()
-ghost = pg.image.load('ghost.png').convert_alpha()
-#make pacman class object for player
-player = Pacman([200, 200])
-enemy = Ghost([200, 200])
-#add to list of sprites to render
-sprites_list.add(player)
-
-#initialize pygame object storage
-pellet_list = pg.sprite.Group()
-#game loop variable, loops until condition is false which stops game
-run = True
-pause = False
+def draw():
+    global enable_death, debug, ghost_available_directions, x, y
+    for yindex, row in enumerate(board):  # y
+        for xindex, column in enumerate(row):  # x
+            if column == 0:
+                if [yindex, xindex] == [y, x]:
+                    print(player_str, end="")
+                elif [yindex, xindex] in ghost_coords:
+                    print(ghost_str, end="")
+                elif [yindex, xindex] in power_coords:
+                    print(power_str, end="")
+                else:
+                    if [yindex, xindex] in coin_coords:
+                        print(coin_str, end="")
+                    else:
+                        print(space_str, end="")
+            if column == 1:
+                print(wall_str, end="")  # █ ▓ ■
+        print()
+    print("Score: " + str(score))
+    if debug:
+        print("X: " + str(x) + "\nY: " + str(y))
+        if not enable_death:
+            print("Safe Mode On")
+        else:
+            print("Safe Mode Off")
+        if powered:
+            print("Powerup On")
+        else:
+            print("Powerup Off")
+        print("Direction:", direction)
+        print("Ghost Coordinates:", ghost_coords)
+        print("Ghost Directions:", ghost_direction)
+        print("Previous Ghost Directions:", ghost_prev_direction)
+        print("Ghost Available Directions:", ghost_available_directions)
+        print("Powerup Coordinates:", power_coords)
+        if powered:
+            print("Powerup Duration:", power_duration)
 
 
-#window loop to render objects
-while run == True:    
-    #check for user input
-    #unlike key.getpressed it won't repeat automatically
-    for event in pg.event.get():
-        #exit program by clicking x
-        if event.type == pg.QUIT:
-            #stop loop
-            run = False
-        elif event.type == pg.KEYDOWN and event.key == pg.K_w:
-            #check if pacman is against edge of maze (or wall but not implemented yet)
-            if pacx > 0 and maze[pacx-1][pacy] != 2:
-                #lazy ghost check
-                if maze[pacx-1][pacy] == 4:
-                    pause = loseGame()
-                #move location of pacman in array
-                #make original space empty
-                maze[pacx][pacy] = 0
-                #move "up" one
-                pacx -= 1
-                maze[pacx][pacy] = 3
-        elif event.type == pg.KEYDOWN and event.key == pg.K_s:
-            #check if pacman is against edge of maze (or wall but not implekented yet)
-            if pacx < mazex - 1 and maze[pacx+1][pacy] != 2:
-                if maze[pacx+1][pacy] == 4:
-                    pause = loseGame()
-                #move location of pacman in array
-                #make original space empty
-                maze[pacx][pacy] = 0
-                #move "down" one
-                pacx += 1
-                maze[pacx][pacy] = 3            
-        elif event.type == pg.KEYDOWN and event.key == pg.K_a:
-            #check if pacman is against edge of maze (or wall but not implekented yet)
-            if pacy > 0 and maze[pacx][pacy-1] != 2:
-                if maze[pacx][pacy-1] == 4:
-                    pause = loseGame()
-                #move location of pacman in array
-                #make original space empty
-                maze[pacx][pacy] = 0
-                #move "left" one
-                pacy -= 1
-                maze[pacx][pacy] = 3  
-        elif event.type == pg.KEYDOWN and event.key == pg.K_d:
-            #check if pacman is against edge of maze (or wall but not implekented yet)
-            if pacy < mazey - 1 and maze[pacx][pacy+1] != 2:
-                if  maze[pacx][pacy+1] == 4:
-                    pause = loseGame()
-                #move location of pacman in array
-                #make original space empty
-                maze[pacx][pacy] = 0
-                #move "right" one
-                pacy += 1
-                maze[pacx][pacy] = 3    
-                
-                
-    #check for keypresses (continuous)
-    keys = pg.key.get_pressed()
-    #keyboard presses to move pacman
-    if keys[pg.K_UP]:
-        #check if pacman is against edge of maze (or wall but not implemented yet)
-        if pacx > 0 and maze[pacx-1][pacy] != 2:
-            if maze[pacx-1][pacy] == 4:
-                    pause = loseGame()
-            #move location of pacman in array
-            #make original space empty
-            maze[pacx][pacy] = 0
-            #move "up" one
-            pacx -= 1
-            maze[pacx][pacy] = 3
-           
-    if keys[pg.K_DOWN]:
-        #check if pacman is against edge of maze (or wall but not implekented yet)
-        if pacx < mazex - 1 and maze[pacx+1][pacy] != 2:
-            if maze[pacx+1][pacy] == 4:
-                    pause = loseGame()
-            #move location of pacman in array
-            #make original space empty
-            maze[pacx][pacy] = 0
-            #move "down" one
-            pacx += 1
-            maze[pacx][pacy] = 3
-        
-    if keys[pg.K_LEFT]:
-        #check if pacman is against edge of maze (or wall but not implekented yet)
-        if pacy > 0 and maze[pacx][pacy-1] != 2:
-            if maze[pacx][pacy-1] == 4:
-                    pause =loseGame()
-            #move location of pacman in array
-            #make original space empty
-            maze[pacx][pacy] = 0
-            #move "left" one
-            pacy -= 1
-            maze[pacx][pacy] = 3            
-        
-    if keys[pg.K_RIGHT]:
-        #check if pacman is against edge of maze (or wall but not implekented yet)
-        if pacy < mazey - 1 and maze[pacx][pacy+1] != 2:
-            if maze[pacx][pacy+1] == 4:
-                    pause = loseGame()
-            #move location of pacman in array
-            #make original space empty
-            maze[pacx][pacy] = 0
-            #move "right" one
-            pacy += 1
-            maze[pacx][pacy] = 3          
-            
-            
-    #clock tick controls how many time the game is updated per second, higher = more frames        
-#    clock.tick (fps)
-    
-    if pause == False:
-        #draw sprites onto window 
-        redraw()
+def check_input():
+    global direction, game_over, debug
+    if msvcrt.kbhit():
+        c = msvcrt.getch()
+        try:
+            key = c.decode("ascii").lower()
+        except:
+            return
+        if key == "w":
+            direction = "UP"
+        elif key == "a":
+            direction = "LEFT"
+        elif key == "s":
+            direction = "DOWN"
+        elif key == "d":
+            direction = "RIGHT"
+        elif key == "n":
+            game_over = True
+        elif key == "o":
+            if debug:
+                debug = False
+            else:
+                debug = True
 
 
-#stop pygame     
-pg.quit()
+def logic():
+    global x, y, direction, wall_list, score, game_over, game_win, max_score, enable_death, \
+        coin_coords, prev_direction, ghost_available_directions, ghost_str, power_duration, powered, \
+        probability_of_changing_direction, max_probability_change_direction, multiplier
+
+    if len(coin_coords) == 0:
+        repopulate_board()
+
+    if [y, x] in coin_coords:
+        score += 10
+        coin_coords.remove([y, x])
+
+    if [y, x] in power_coords:
+        powered = True
+        power_coords.remove([y, x])
+        ghost_str = "0"
+        power_duration = 100
+
+    if powered:
+        for index, ghost in enumerate(ghost_coords):
+            if [y, x] == ghost:
+                ghost_coords[index] = ghost_initial_coords[index]
+                score += 200 * multiplier
+                multiplier += 1
+        power_duration -= 1
+        if power_duration < 20:
+            if power_duration % 2 == 0:
+                ghost_str = "%"
+            else:
+                ghost_str = "0"
+
+        if power_duration <= 0:
+            powered = False
+            ghost_str = "X"
+            multiplier = 1
+
+    if direction == "UP":
+        y -= 1
+    elif direction == "LEFT":
+        x -= 1
+    elif direction == "DOWN":
+        y += 1
+    elif direction == "RIGHT":
+        x += 1
+
+    if x >= const_width:
+        x = 0
+    elif x < 0:
+        x = const_width
+
+    if [y, x] in wall_list:
+        if direction == "UP":
+            y += 1
+            direction = "STOP"
+        elif direction == "LEFT":
+            x += 1
+            direction = "STOP"
+        elif direction == "DOWN":
+            y -= 1
+            direction = "STOP"
+        elif direction == "RIGHT":
+            x -= 1
+            direction = "STOP"
+    # ghost logic start
+    if not powered:
+        if enable_death:
+            if [y, x] in ghost_coords:
+                game_over = True
+
+    ghost_available_directions = []
+    for index, ghost in enumerate(ghost_coords):
+        # x = ghost[1] <--
+        # y = ghost[0] <--
+
+        if ghost[1] >= const_width:
+            ghost_coords[index] = [ghost[0], ghost[1] - 1]
+        elif ghost[1] < 0:
+            ghost_coords[index] = [ghost[0], ghost[1] + 1]
+
+        # start of main movement logic \\
+        if ghost_direction[index] == "STOP":
+            if board[ghost[0]][ghost[1] - 1] == 0:
+                ghost_available_directions.append("LEFT")
+            if board[ghost[0]][ghost[1] + 1] == 0:
+                ghost_available_directions.append("RIGHT")
+            if board[ghost[0] - 1][ghost[1]] == 0:
+                ghost_available_directions.append("UP")
+            if board[ghost[0] + 1][ghost[1]] == 0:
+                ghost_available_directions.append("DOWN")
+
+            if ghost_prev_direction[index] in ghost_available_directions:
+                # prev_index = ghost_available_directions.index(ghost_prev_direction[index])
+                if len(ghost_available_directions) > 1:
+                    ghost_available_directions.remove(ghost_prev_direction[index])
+            num = random.randint(0, max_probability_going_back)
+            if num >= max_probability_going_back - probability_going_back:
+                ghost_direction[index] = ghost_prev_direction[index]
+            else:
+                ghost_direction[index] = random.choice(ghost_available_directions)
+        move_bool = False
+        if ghost_direction[index] == "UP":
+            ghost_coords[index] = [ghost[0] - 1, ghost[1]]
+            num = random.randint(0, max_probability_change_direction)
+            if board[ghost[0]][ghost[1] - 1] == 0 and not move_bool:  # and ghost_prev_direction[index] != "RIGHT":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "RIGHT"
+                    ghost_direction[index] == "LEFT"
+                    ghost_coords[index] = [ghost[0], ghost[1] - 1]
+                    move_bool = True
+            if board[ghost[0]][ghost[1] + 1] == 0 and not move_bool:  # and ghost_prev_direction[index] != "LEFT":
+                if num <= probability_of_changing_direction:
+                    ghost_coords[index] = [ghost[0], ghost[1] + 1]
+                    ghost_prev_direction[index] = "LEFT"
+                    ghost_direction[index] == "RIGHT"
+                    move_bool = True
+        elif ghost_direction[index] == "LEFT":
+            ghost_coords[index] = [ghost[0], ghost[1] - 1]
+            num = random.randint(0, max_probability_change_direction)
+            if board[ghost[0] - 1][ghost[1]] == 0 and not move_bool:  # and ghost_prev_direction[index] != "DOWN":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "DOWN"
+                    ghost_direction[index] == "UP"
+                    ghost_coords[index] = [ghost[0] - 1, ghost[1]]
+                    move_bool = True
+            if board[ghost[0] + 1][ghost[1]] == 0 and not move_bool:  # and ghost_prev_direction[index] != "UP":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "UP"
+                    ghost_direction[index] == "DOWN"
+                    ghost_coords[index] = [ghost[0] + 1, ghost[1]]
+                    move_bool = True
+        elif ghost_direction[index] == "DOWN":
+            ghost_coords[index] = [ghost[0] + 1, ghost[1]]
+            num = random.randint(0, max_probability_change_direction)
+            if board[ghost[0]][ghost[1] - 1] == 0 and not move_bool:  # and ghost_prev_direction[index] != "RIGHT":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "RIGHT"
+                    ghost_direction[index] == "LEFT"
+                    ghost_coords[index] = [ghost[0], ghost[1] - 1]
+                    move_bool = True
+            if board[ghost[0]][ghost[1] + 1] == 0 and not move_bool:  # and ghost_prev_direction[index] != "LEFT":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "LEFT"
+                    ghost_direction[index] == "RIGHT"
+                    ghost_coords[index] = [ghost[0], ghost[1] + 1]
+                    move_bool = True
+        elif ghost_direction[index] == "RIGHT":
+            ghost_coords[index] = [ghost[0], ghost[1] + 1]
+            num = random.randint(0, max_probability_change_direction)
+            if board[ghost[0] - 1][ghost[1]] == 0 and not move_bool:  # and ghost_prev_direction[index] != "DOWN":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "DOWN"
+                    ghost_direction[index] == "UP"
+                    ghost_coords[index] = [ghost[0] - 1, ghost[1]]
+                    move_bool = True
+            if board[ghost[0] + 1][ghost[1]] == 0 and not move_bool:  # and ghost_prev_direction[index] != "UP":
+                if num <= probability_of_changing_direction:
+                    ghost_prev_direction[index] = "UP"
+                    ghost_direction[index] == "DOWN"
+                    ghost_coords[index] = [ghost[0] + 1, ghost[1]]
+                    move_bool = True
+        # End of main movement logic //
+        if [ghost[0], ghost[1]] in wall_list:
+            if ghost_direction[index] == "UP":
+                ghost_prev_direction[index] = "DOWN"
+                ghost_coords[index] = [ghost[0] + 1, ghost[1]]
+                ghost_direction[index] = "STOP"
+            elif ghost_direction[index] == "LEFT":
+                ghost_prev_direction[index] = "RIGHT"
+                ghost_coords[index] = [ghost[0], ghost[1] + 1]
+                ghost_direction[index] = "STOP"
+            elif ghost_direction[index] == "DOWN":
+                ghost_prev_direction[index] = "UP"
+                ghost_coords[index] = [ghost[0] - 1, ghost[1]]
+                ghost_direction[index] = "STOP"
+            elif ghost_direction[index] == "RIGHT":
+                ghost_prev_direction[index] = "LEFT"
+                ghost_coords[index] = [ghost[0], ghost[1] - 1]
+                ghost_direction[index] = "STOP"
+    print()
+
+
+def main():
+    global game_over
+    setup()
+    while not game_over:
+        if not idle:
+            os.system("cls")
+        draw()
+        check_input()
+        logic()
+        #pass values to graphics rendering+
+        window = pacgraphics.drawWindow()
+        pacgraphics.otherRedraw(window, board, coin_coords, ghost_coords, power_coords, wall_list, score)
+        time.sleep(0.2)  # game speed
+    print("Game Over!")
+    input("Press enter to continue . . . ")
+
+
+if __name__ == "__main__":
+    if "idlelib.run" in sys.modules:  # if running through IDLE
+        try:
+            subprocess.call(["python", "pac-man_main.py"])  # try running through a console window
+        except:
+            print("This game will not run properly in IDLE.")
+            print("It is highly recommended that you run it through a console window instead.\n")
+            choice = input("Would you like to proceed anyway? [Y/N]: ").strip().lower()
+            if choice == "y":
+                idle = True
+                main()
+    else:
+        idle = False
+        main()
